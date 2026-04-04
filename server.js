@@ -6,7 +6,7 @@ const connectDB = require('./config/db');
 
 const app = express();
 
-// Connect to MongoDB Atlas
+// Connect to MongoDB Atlas (non-blocking)
 connectDB();
 
 // Middleware
@@ -29,6 +29,6 @@ app.get('*', (req, res) => {
 
 // Start server
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
-  console.log(`\n🚀 Exam Platform running on http://localhost:${PORT}\n`);
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`\n🚀 Exam Platform running on http://0.0.0.0:${PORT}\n`);
 });
