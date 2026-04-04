@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Student Dashboard — Browse available exams, take tests, and view your results.">
+  <title>Exam Platform — Student Dashboard</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <div class="toast-container" id="toastContainer"></div>
+  <div class="page-wrapper">
+
+    <!-- Navbar -->
+    <nav class="navbar">
+      <div class="container">
+        <div class="navbar-brand">
+          <div class="logo-icon">📝</div>
+          Exam Platform
+        </div>
+        <div class="navbar-links">
+          <button class="tab-item active" onclick="showTab('exams')" id="tabExams">Available Exams</button>
+          <button class="tab-item" onclick="showTab('results')" id="tabResults">My Results</button>
+        </div>
+        <div class="navbar-user">
+          <div class="user-avatar" id="userAvatar"></div>
+          <span id="userName"></span>
+          <button class="btn btn-ghost btn-sm" onclick="logout()">Logout</button>
+        </div>
+      </div>
+    </nav>
+
+    <div class="container">
+      <!-- Header -->
+      <div class="dashboard-header">
+        <h1>Student Dashboard</h1>
+        <p>Browse exams, take tests, and track your performance</p>
+      </div>
+
+      <!-- Stats -->
+      <div class="stats-grid" id="statsGrid">
+        <div class="stat-card">
+          <div class="stat-icon blue">📝</div>
+          <div>
+            <div class="stat-value" id="statAvailable">0</div>
+            <div class="stat-label">Available Exams</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon green">✅</div>
+          <div>
+            <div class="stat-value" id="statCompleted">0</div>
+            <div class="stat-label">Completed</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon teal">📊</div>
+          <div>
+            <div class="stat-value" id="statAvgScore">—</div>
+            <div class="stat-label">Avg Score</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon pink">🏆</div>
+          <div>
+            <div class="stat-value" id="statPassRate">—</div>
+            <div class="stat-label">Pass Rate</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Available Exams Tab -->
+      <div id="examsTab">
+        <h2 class="section-title">📋 Available Exams</h2>
+        <div class="exams-grid" id="examsGrid">
+          <div class="spinner"></div>
+        </div>
+      </div>
+
+      <!-- Results Tab -->
+      <div id="resultsTab" style="display: none;">
+        <h2 class="section-title">📊 My Results</h2>
+        <div id="resultsContainer">
+          <div class="spinner"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/js/student.js"></script>
+</body>
+</html>

@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Examiner Dashboard — Create and manage your exams, view student results.">
+  <title>Exam Platform — Examiner Dashboard</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <div class="toast-container" id="toastContainer"></div>
+  <div class="page-wrapper">
+
+    <!-- Navbar -->
+    <nav class="navbar">
+      <div class="container">
+        <div class="navbar-brand">
+          <div class="logo-icon">📝</div>
+          Exam Platform
+        </div>
+        <div class="navbar-links">
+          <a href="#" class="active" id="navExams">My Exams</a>
+        </div>
+        <div class="navbar-user">
+          <div class="user-avatar" id="userAvatar"></div>
+          <span id="userName"></span>
+          <button class="btn btn-ghost btn-sm" onclick="logout()">Logout</button>
+        </div>
+      </div>
+    </nav>
+
+    <div class="container">
+      <!-- Header -->
+      <div class="dashboard-header">
+        <h1>Examiner Dashboard</h1>
+        <p>Create exams, upload questions, and track student performance</p>
+      </div>
+
+      <!-- Stats -->
+      <div class="stats-grid" id="statsGrid">
+        <div class="stat-card">
+          <div class="stat-icon purple">📄</div>
+          <div>
+            <div class="stat-value" id="statTotalExams">0</div>
+            <div class="stat-label">Total Exams</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon green">✅</div>
+          <div>
+            <div class="stat-value" id="statActiveExams">0</div>
+            <div class="stat-label">Active Exams</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon blue">📊</div>
+          <div>
+            <div class="stat-value" id="statTotalQuestions">0</div>
+            <div class="stat-label">Total Questions</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Actions -->
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+        <h2 class="section-title" style="margin-bottom: 0;">📋 Your Exams</h2>
+        <button class="btn btn-primary" onclick="openCreateExamModal()">+ Create Exam</button>
+      </div>
+
+      <!-- Exams Grid -->
+      <div class="exams-grid" id="examsGrid">
+      </div>
+    </div>
+  </div>
+
+  <!-- Create Exam Modal -->
+  <div class="modal-overlay" id="createExamModal">
+    <div class="modal" style="max-width: 750px;">
+      <div class="modal-header">
+        <h2>📝 Create New Exam</h2>
+        <button class="modal-close" onclick="closeCreateExamModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <form id="createExamForm">
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Exam Title *</label>
+              <input type="text" id="examTitle" class="form-input" placeholder="e.g. Mathematics Final" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Duration (minutes) *</label>
+              <input type="number" id="examDuration" class="form-input" placeholder="30" min="1" required>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Description</label>
+            <textarea id="examDescription" class="form-textarea" placeholder="A brief description of the exam..."></textarea>
+          </div>
+          <div class="form-group">
+            <label class="form-label">🕐 Scheduled Start Time (optional)</label>
+            <input type="datetime-local" id="examScheduledStart" class="form-input">
+            <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 6px;">
+              Leave empty for an always-available exam. Set a time to make students wait until this exact time to start.
+            </div>
+          </div>
+
+          <div style="display: flex; justify-content: space-between; align-items: center; margin: 24px 0 16px;">
+            <h3>Questions</h3>
+            <button type="button" class="btn btn-ghost btn-sm" onclick="addQuestion()">+ Add Question</button>
+          </div>
+
+          <div id="questionsContainer"></div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" onclick="closeCreateExamModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="submitExam()">Create Exam</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- View Results Modal -->
+  <div class="modal-overlay" id="resultsModal">
+    <div class="modal" style="max-width: 750px;">
+      <div class="modal-header">
+        <h2>📊 Exam Results</h2>
+        <button class="modal-close" onclick="closeResultsModal()">✕</button>
+      </div>
+      <div class="modal-body" id="resultsModalBody">
+        <!-- Populated dynamically -->
+      </div>
+    </div>
+  </div>
+
+  <script src="/js/examiner.js"></script>
+</body>
+</html>

@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="View your detailed exam results and performance breakdown.">
+  <title>Exam Platform — Results</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <div class="toast-container" id="toastContainer"></div>
+  <div class="page-wrapper">
+
+    <!-- Navbar -->
+    <nav class="navbar">
+      <div class="container">
+        <div class="navbar-brand">
+          <div class="logo-icon">📝</div>
+          Exam Platform
+        </div>
+        <div class="navbar-links">
+          <a href="/student-dashboard.html">← Back to Dashboard</a>
+        </div>
+        <div class="navbar-user">
+          <div class="user-avatar" id="userAvatar"></div>
+          <span id="userName"></span>
+        </div>
+      </div>
+    </nav>
+
+    <div class="container" style="padding-top: 32px; padding-bottom: 48px;">
+      <div id="resultContent">
+        <div class="spinner"></div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/js/results.js"></script>
+</body>
+</html>

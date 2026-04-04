@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Create your Exam Platform account as an Examiner or Student.">
+  <title>Exam Platform — Register</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <div class="toast-container" id="toastContainer"></div>
+
+  <div class="auth-container">
+    <div class="auth-card">
+      <div class="auth-header">
+        <div class="logo">🎓</div>
+        <h1>Student Registration</h1>
+        <p>Create your student account to take exams</p>
+      </div>
+
+      <form id="registerForm">
+        <input type="hidden" id="registerRole" value="student">
+
+        <div class="form-group">
+          <label class="form-label" for="registerName">Full Name</label>
+          <input type="text" id="registerName" class="form-input" placeholder="John Doe" required>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="registerEmail">Email Address</label>
+          <input type="email" id="registerEmail" class="form-input" placeholder="you@example.com" required>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="registerPassword">Password</label>
+          <input type="password" id="registerPassword" class="form-input" placeholder="Min. 6 characters" required minlength="6">
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-block btn-lg" id="registerBtn">
+          Create Account
+        </button>
+      </form>
+
+      <div class="auth-footer">
+        Already have an account? <a href="/index.html">Sign in</a>
+      </div>
+    </div>
+  </div>
+
+  <script src="/js/auth.js"></script>
+</body>
+</html>
