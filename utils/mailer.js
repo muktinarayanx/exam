@@ -1,32 +1,16 @@
-const nodemailer = require('nodemailer');
+const https = require('https');
 
 // Warn at startup if email config is missing
-if (!process.env.EMAIL_HOST || !process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
-  console.warn('⚠️  WARNING: Email environment variables (EMAIL_HOST, EMAIL_USER, EMAIL_PASS) are not fully configured!');
-  console.warn('   Result emails will NOT be sent. Set these in your Render environment variables.');
+if (!process.env.RESEND_API_KEY) {
+  console.warn('⚠️  WARNING: RESEND_API_KEY is not set! Result emails will NOT be sent.');
+  console.warn('   Get a free API key at https://resend.com and add it to Render environment variables.');
 }
-
-const createTransporter = () => {
-  if (!process.env.EMAIL_HOST || !process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
-    throw new Error('Email not configured: EMAIL_HOST, EMAIL_USER, or EMAIL_PASS is missing');
-  }
-  return nodemailer.createTransport({
-    host: process.env.EMAIL_HOST,
-    port: 465,
-    secure: true,
-    auth: {
-      user: process.env.EMAIL_USER,
-      pass: process.env.EMAIL_PASS
-    },
-    connectionTimeout: 10000,
-    greetingTimeout: 10000,
-    socketTimeout: 15000
-  });
-};
 
 const sendResultEmail = async (studentEmail, studentName, examTitle, score, totalMarks, percentage, passed) => {
   try {
-    const transporter = createTransporter();
+    if (!process.env.RESEND_API_KEY) {
+      throw new Error('RESEND_API_KEY not configured');
+    }
 
     const passStatus = passed ? '🎉 PASSED' : '❌ FAILED';
     const passColor = passed ? '#00d4aa' : '#ff4757';
@@ -62,14 +46,42 @@ const sendResultEmail = async (studentEmail, studentName, examTitle, score, tota
       </div>
     `;
 
-    await transporter.sendMail({
-      from: `"Exam Platform" <${process.env.EMAIL_USER}>`,
-      to: studentEmail,
+    // Use Resend API (works over HTTPS - no SMTP port blocking)
+    const emailData = JSON.stringify({
+      from: 'Exam Platform <onboarding@resend.dev>',
+      to: [studentEmail],
       subject: `Exam Result: ${examTitle} — ${passed ? 'Passed ✅' : 'Failed ❌'}`,
       html: htmlContent
     });
 
-    console.log(`📧 Result email sent to ${studentEmail}`);
+    const result = await new Promise((resolve, reject) => {
+      const req = https.request({
+        hostname: 'api.resend.com',
+        path: '/emails',
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${process.env.RESEND_API_KEY}`,
+          'Content-Type': 'application/json',
+          'Content-Length': Buffer.byteLength(emailData)
+        }
+      }, (res) => {
+        let body = '';
+        res.on('data', chunk => body += chunk);
+        res.on('end', () => {
+          if (res.statusCode >= 200 && res.statusCode < 300) {
+            resolve(JSON.parse(body));
+          } else {
+            reject(new Error(`Resend API error (${res.statusCode}): ${body}`));
+          }
+        });
+      });
+
+      req.on('error', reject);
+      req.write(emailData);
+      req.end();
+    });
+
+    console.log(`📧 Result email sent to ${studentEmail} (Resend ID: ${result.id})`);
     return true;
   } catch (err) {
     console.error(`❌ Email error: ${err.message}`);

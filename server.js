@@ -24,45 +24,52 @@ app.use('/api/student', require('./routes/student'));
 
 // Debug: Test email endpoint (visit /api/debug/email-test in browser)
 app.get('/api/debug/email-test', async (req, res) => {
-  const nodemailer = require('nodemailer');
+  const https = require('https');
   const result = {
-    envVars: {
-      EMAIL_HOST: process.env.EMAIL_HOST ? '✅ set' : '❌ missing',
-      EMAIL_PORT: process.env.EMAIL_PORT ? '✅ set' : '❌ missing',
-      EMAIL_USER: process.env.EMAIL_USER ? `✅ ${process.env.EMAIL_USER}` : '❌ missing',
-      EMAIL_PASS: process.env.EMAIL_PASS ? `✅ set (${process.env.EMAIL_PASS.length} chars)` : '❌ missing'
-    }
+    RESEND_API_KEY: process.env.RESEND_API_KEY ? `✅ set (${process.env.RESEND_API_KEY.length} chars)` : '❌ missing'
   };
 
+  if (!process.env.RESEND_API_KEY) {
+    result.error = '❌ RESEND_API_KEY not set. Get one free at https://resend.com';
+    return res.json(result);
+  }
+
   try {
-    const transporter = nodemailer.createTransport({
-      host: process.env.EMAIL_HOST,
-      port: 465,
-      secure: true,
-      auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS
-      },
-      connectionTimeout: 10000,
-      greetingTimeout: 10000,
-      socketTimeout: 15000
-    });
-
-    await transporter.verify();
-    result.smtpConnection = '✅ SMTP connection verified';
-
-    // Try sending a test email to the sender itself
-    await transporter.sendMail({
-      from: `"Exam Platform" <${process.env.EMAIL_USER}>`,
-      to: process.env.EMAIL_USER,
+    const testData = JSON.stringify({
+      from: 'Exam Platform <onboarding@resend.dev>',
+      to: ['foradvance685@gmail.com'],
       subject: 'Test Email from Exam Platform',
-      text: 'If you see this, email is working on Render!'
+      text: 'If you see this, Resend email is working on Render!'
     });
-    result.testEmail = '✅ Test email sent to ' + process.env.EMAIL_USER;
+
+    const apiResult = await new Promise((resolve, reject) => {
+      const req = https.request({
+        hostname: 'api.resend.com',
+        path: '/emails',
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${process.env.RESEND_API_KEY}`,
+          'Content-Type': 'application/json',
+          'Content-Length': Buffer.byteLength(testData)
+        }
+      }, (res) => {
+        let body = '';
+        res.on('data', chunk => body += chunk);
+        res.on('end', () => resolve({ status: res.statusCode, body }));
+      });
+      req.on('error', reject);
+      req.write(testData);
+      req.end();
+    });
+
+    result.apiResponse = apiResult;
+    if (apiResult.status >= 200 && apiResult.status < 300) {
+      result.testEmail = '✅ Test email sent!';
+    } else {
+      result.error = `❌ API returned ${apiResult.status}: ${apiResult.body}`;
+    }
   } catch (err) {
     result.error = `❌ ${err.message}`;
-    result.errorCode = err.code || 'unknown';
-    result.fullError = err.toString();
   }
 
   res.json(result);
