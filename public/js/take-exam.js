@@ -177,6 +177,7 @@ async function submitExam() {
 
     // Show result modal
     const result = data.result;
+    const emailSent = data.emailSent;
     const resultContent = document.getElementById('resultContent');
     resultContent.innerHTML = `
       <div style="font-size: 3rem; margin-bottom: 16px;">${result.passed ? '🎉' : '😔'}</div>
@@ -198,8 +199,10 @@ async function submitExam() {
           <div class="result-detail-label">Percentage</div>
         </div>
       </div>
-      <p style="color: var(--text-muted); margin-top: 24px; font-size: 0.85rem;">
-        📧 Results have been emailed to <strong>${user.email}</strong>
+      <p style="color: ${emailSent ? 'var(--text-muted)' : '#ff4757'}; margin-top: 24px; font-size: 0.85rem;">
+        ${emailSent
+          ? `📧 Results have been emailed to <strong>${user.email}</strong>`
+          : `⚠️ Email could not be sent. You can view your results on the dashboard.`}
       </p>
     `;
 

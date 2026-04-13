@@ -1,9 +1,18 @@
 const nodemailer = require('nodemailer');
 
+// Warn at startup if email config is missing
+if (!process.env.EMAIL_HOST || !process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
+  console.warn('⚠️  WARNING: Email environment variables (EMAIL_HOST, EMAIL_USER, EMAIL_PASS) are not fully configured!');
+  console.warn('   Result emails will NOT be sent. Set these in your Render environment variables.');
+}
+
 const createTransporter = () => {
+  if (!process.env.EMAIL_HOST || !process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
+    throw new Error('Email not configured: EMAIL_HOST, EMAIL_USER, or EMAIL_PASS is missing');
+  }
   return nodemailer.createTransport({
     host: process.env.EMAIL_HOST,
-    port: parseInt(process.env.EMAIL_PORT),
+    port: parseInt(process.env.EMAIL_PORT || '587'),
     secure: false,
     auth: {
       user: process.env.EMAIL_USER,
