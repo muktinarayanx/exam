@@ -184,31 +184,23 @@ router.post('/exams/:id/submit', async (req, res) => {
       passed
     });
 
-    // Send email (await so we can report status)
-    let emailSent = false;
-    try {
-      console.log(`📧 Attempting to send result email to: ${req.user.email} (${req.user.name})`);
-      emailSent = await sendResultEmail(
-        req.user.email,
-        req.user.name,
-        exam.title,
-        score,
-        totalMarks,
-        percentage,
-        passed
-      );
-      if (!emailSent) {
-        console.error(`❌ Email send returned false for: ${req.user.email}`);
-      }
-    } catch (emailErr) {
-      console.error(`❌ Email send failed for ${req.user.email}:`, emailErr.message);
-    }
+    // Send email in background (non-blocking so result shows instantly)
+    console.log(`📧 Sending result email to: ${req.user.email} (${req.user.name})`);
+    sendResultEmail(
+      req.user.email,
+      req.user.name,
+      exam.title,
+      score,
+      totalMarks,
+      percentage,
+      passed
+    ).then(sent => {
+      if (sent) console.log(`✅ Email sent to ${req.user.email}`);
+      else console.error(`❌ Email send returned false for: ${req.user.email}`);
+    }).catch(err => console.error(`❌ Email send failed for ${req.user.email}:`, err.message));
 
     res.json({
-      message: emailSent
-        ? 'Exam submitted successfully! Results have been emailed to you.'
-        : 'Exam submitted successfully! However, the result email could not be sent. You can view your results on the dashboard.',
-      emailSent,
+      message: 'Exam submitted successfully! Results will be emailed to you shortly.',
       result: {
         score,
         totalMarks,
