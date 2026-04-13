@@ -1,6 +1,7 @@
 const express = require('express');
 const Exam = require('../models/Exam');
 const Result = require('../models/Result');
+const User = require('../models/User');
 const { authenticate, authorize } = require('../middleware/auth');
 const { sendResultEmail } = require('../utils/mailer');
 
@@ -9,17 +10,28 @@ const router = express.Router();
 // All routes require student role
 router.use(authenticate, authorize('student'));
 
-// GET /api/student/exams — Get all active exams for students
+// GET /api/student/exams — Get available and attempted exams for students
 router.get('/exams', async (req, res) => {
   try {
-    const exams = await Exam.find({ isActive: true })
-      .select('title description duration questions createdAt scheduledStart')
-      .sort({ createdAt: -1 });
+    // Get all valid examiner IDs (only show exams from existing examiners)
+    const validExaminers = await User.find({ role: 'examiner' }).select('_id');
+    const validExaminerIds = validExaminers.map(e => e._id);
 
-    // Check which exams the student already attempted (include result ID)
+    // Get student's attempted exam results
     const results = await Result.find({ student: req.user._id }).select('exam _id');
     const attemptedMap = {};
     results.forEach(r => { attemptedMap[r.exam.toString()] = r._id.toString(); });
+    const attemptedExamIds = results.map(r => r.exam);
+
+    // Fetch active exams from valid examiners + any exams the student has attempted
+    const exams = await Exam.find({
+      $or: [
+        { isActive: true, createdBy: { $in: validExaminerIds } },
+        { _id: { $in: attemptedExamIds } }
+      ]
+    })
+      .select('title description duration questions createdAt scheduledStart isActive')
+      .sort({ createdAt: -1 });
 
     const now = new Date();
 
@@ -27,6 +39,11 @@ router.get('/exams', async (req, res) => {
       let status = 'available';
       let scheduledStart = exam.scheduledStart ? exam.scheduledStart : null;
       
+      // If exam is not active and not attempted, skip it
+      if (!exam.isActive && !attemptedMap[exam._id.toString()]) {
+        return null;
+      }
+
       if (scheduledStart) {
         const startTime = new Date(scheduledStart);
         const endTime = new Date(startTime.getTime() + exam.duration * 60000);
@@ -53,7 +70,7 @@ router.get('/exams', async (req, res) => {
         resultId: attemptedMap[exam._id.toString()] || null,
         status: attemptedMap[exam._id.toString()] ? 'attempted' : status
       };
-    });
+    }).filter(Boolean); // Remove null entries
 
     res.json(examsWithStatus);
   } catch (err) {
