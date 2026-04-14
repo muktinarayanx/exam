@@ -36,6 +36,13 @@ async function apiRequest(url, options = {}) {
     const response = await fetch(url, { ...options, headers, signal: controller.signal });
     clearTimeout(timeoutId);
     const data = await response.json();
+    
+    if (response.status === 401) {
+      localStorage.clear();
+      window.location.href = '/index.html';
+      throw new Error('Session expired. Please login again.');
+    }
+    
     if (!response.ok) throw new Error(data.message || 'Request failed');
     return data;
   } catch (err) {
