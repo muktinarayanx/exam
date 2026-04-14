@@ -73,11 +73,11 @@
     </div>
   </div>
 
-  <!-- Create Exam Modal -->
+  <!-- Create/Edit Exam Modal -->
   <div class="modal-overlay" id="createExamModal">
     <div class="modal" style="max-width: 750px;">
       <div class="modal-header">
-        <h2>📝 Create New Exam</h2>
+        <h2 id="examModalTitle">📝 Create New Exam</h2>
         <button class="modal-close" onclick="closeCreateExamModal()">✕</button>
       </div>
       <div class="modal-body">
@@ -114,7 +114,7 @@
       </div>
       <div class="modal-footer">
         <button class="btn btn-ghost" onclick="closeCreateExamModal()">Cancel</button>
-        <button class="btn btn-primary" onclick="submitExam()">Create Exam</button>
+        <button class="btn btn-primary" id="examSubmitBtn" onclick="submitExam()">Create Exam</button>
       </div>
     </div>
   </div>

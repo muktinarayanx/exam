@@ -45,6 +45,7 @@ async function apiRequest(url, options = {}) {
 // ── State ──
 let exams = [];
 let questionCount = 0;
+let editingExamId = null; // null = creating, string = editing
 
 // ── Load Exams ──
 async function loadExams() {
@@ -95,15 +96,14 @@ function renderExams() {
         <span class="exam-meta-item">📅 ${new Date(exam.createdAt).toLocaleDateString()}</span>
         ${exam.scheduledStart ? `<span class="exam-meta-item">🕐 ${new Date(exam.scheduledStart).toLocaleString()}</span>` : ''}
       </div>
-      <div class="card-footer">
+      <div class="card-footer" style="display: flex; gap: 8px; flex-wrap: wrap;">
         <button class="btn btn-ghost btn-sm" onclick="viewResults('${exam._id}')">📊 Results</button>
-        <div style="display: flex; gap: 8px;">
-          <button class="btn btn-sm ${exam.isActive ? 'btn-ghost' : 'btn-success'}" 
-                  onclick="toggleExam('${exam._id}')">
-            ${exam.isActive ? 'Deactivate' : 'Activate'}
-          </button>
-          <button class="btn btn-danger btn-sm" onclick="deleteExam('${exam._id}')">Delete</button>
-        </div>
+        <button class="btn btn-ghost btn-sm" onclick="openEditExamModal('${exam._id}')" title="Edit Exam">✏️ Edit</button>
+        <button class="btn btn-sm ${exam.isActive ? 'btn-ghost' : 'btn-success'}" 
+                onclick="toggleExam('${exam._id}')">
+          ${exam.isActive ? 'Deactivate' : 'Activate'}
+        </button>
+        <button class="btn btn-danger btn-sm" onclick="deleteExam('${exam._id}')">Delete</button>
       </div>
     </div>
   `).join('');
@@ -111,23 +111,80 @@ function renderExams() {
 
 // ── Create Exam Modal ──
 function openCreateExamModal() {
+  editingExamId = null;
   questionCount = 0;
   document.getElementById('questionsContainer').innerHTML = '';
   document.getElementById('createExamForm').reset();
+  document.getElementById('examModalTitle').textContent = '📝 Create New Exam';
+  document.getElementById('examSubmitBtn').textContent = 'Create Exam';
   addQuestion(); // Start with 1 question
   document.getElementById('createExamModal').classList.add('active');
 }
 
 function closeCreateExamModal() {
   document.getElementById('createExamModal').classList.remove('active');
+  editingExamId = null;
 }
 
+// ── Edit Exam Modal ──
+async function openEditExamModal(examId) {
+  try {
+    // Fetch full exam data (with correct answers)
+    const exam = await apiRequest(`/api/exams/${examId}`);
+
+    editingExamId = examId;
+    questionCount = 0;
+    document.getElementById('questionsContainer').innerHTML = '';
+    document.getElementById('createExamForm').reset();
+
+    // Set modal title & button
+    document.getElementById('examModalTitle').textContent = '✏️ Edit Exam';
+    document.getElementById('examSubmitBtn').textContent = 'Save Changes';
+
+    // Fill in exam details
+    document.getElementById('examTitle').value = exam.title || '';
+    document.getElementById('examDuration').value = exam.duration || '';
+    document.getElementById('examDescription').value = exam.description || '';
+
+    if (exam.scheduledStart) {
+      // Format for datetime-local input (YYYY-MM-DDTHH:MM)
+      const dt = new Date(exam.scheduledStart);
+      const offset = dt.getTimezoneOffset();
+      const local = new Date(dt.getTime() - offset * 60000);
+      document.getElementById('examScheduledStart').value = local.toISOString().slice(0, 16);
+    }
+
+    // Add each question with pre-filled data
+    if (exam.questions && exam.questions.length > 0) {
+      exam.questions.forEach(q => addQuestionWithData(q));
+    } else {
+      addQuestion();
+    }
+
+    document.getElementById('createExamModal').classList.add('active');
+  } catch (err) {
+    showToast(err.message, 'error');
+  }
+}
+
+// ── Question Builder ──
 function addQuestion() {
+  addQuestionWithData(null);
+}
+
+function addQuestionWithData(data) {
   questionCount++;
   const container = document.getElementById('questionsContainer');
   const qDiv = document.createElement('div');
   qDiv.className = 'question-builder';
   qDiv.id = `question-${questionCount}`;
+
+  const qText = data ? escapeHtmlAttr(data.questionText) : '';
+  const qMarks = data ? (data.marks || 1) : 1;
+  const opts = data ? data.options : ['', '', '', ''];
+  const correctAnswer = data ? data.correctAnswer : -1;
+  const qImage = data && data.questionImage ? data.questionImage : '';
+
   qDiv.innerHTML = `
     <div class="question-builder-header">
       <span class="question-builder-number">Question ${questionCount}</span>
@@ -135,49 +192,49 @@ function addQuestion() {
     </div>
     <div class="form-group">
       <label class="form-label">Question Text *</label>
-      <textarea class="form-textarea q-text" placeholder="Enter your question..." rows="2" required></textarea>
+      <textarea class="form-textarea q-text" placeholder="Enter your question..." rows="2" required>${qText}</textarea>
     </div>
     <div class="form-row">
       <div class="form-group">
         <label class="form-label">Marks</label>
-        <input type="number" class="form-input q-marks" value="1" min="1" style="max-width: 100px;">
+        <input type="number" class="form-input q-marks" value="${qMarks}" min="1" style="max-width: 100px;">
       </div>
       <div class="form-group">
         <label class="form-label">📷 Question Image (optional)</label>
         <input type="file" class="form-input q-image" accept="image/*" onchange="previewQuestionImage(this)">
       </div>
     </div>
-    <div class="q-image-preview" style="display: none; margin-bottom: 16px;">
-      <img src="" style="max-width: 100%; max-height: 200px; border-radius: 8px; border: 1px solid var(--border-glass);">
+    <div class="q-image-preview" style="display: ${qImage ? 'block' : 'none'}; margin-bottom: 16px;">
+      <img src="${qImage}" style="max-width: 100%; max-height: 200px; border-radius: 8px; border: 1px solid var(--border-glass);">
       <button type="button" class="btn btn-ghost btn-sm" style="margin-top: 8px;" onclick="removeQuestionImage(this)">✕ Remove Image</button>
     </div>
     <div class="form-row">
       <div class="form-group">
         <label class="form-label">Option A *</label>
-        <input type="text" class="form-input q-opt" placeholder="Option A" required>
+        <input type="text" class="form-input q-opt" placeholder="Option A" value="${escapeHtmlAttr(opts[0] || '')}" required>
       </div>
       <div class="form-group">
         <label class="form-label">Option B *</label>
-        <input type="text" class="form-input q-opt" placeholder="Option B" required>
+        <input type="text" class="form-input q-opt" placeholder="Option B" value="${escapeHtmlAttr(opts[1] || '')}" required>
       </div>
     </div>
     <div class="form-row">
       <div class="form-group">
         <label class="form-label">Option C *</label>
-        <input type="text" class="form-input q-opt" placeholder="Option C" required>
+        <input type="text" class="form-input q-opt" placeholder="Option C" value="${escapeHtmlAttr(opts[2] || '')}" required>
       </div>
       <div class="form-group">
         <label class="form-label">Option D *</label>
-        <input type="text" class="form-input q-opt" placeholder="Option D" required>
+        <input type="text" class="form-input q-opt" placeholder="Option D" value="${escapeHtmlAttr(opts[3] || '')}" required>
       </div>
     </div>
     <div class="form-group">
       <div class="correct-answer-label">Correct Answer *</div>
       <div class="correct-answer-options">
-        <label><input type="radio" name="correct-${questionCount}" value="0"><span>A</span></label>
-        <label><input type="radio" name="correct-${questionCount}" value="1"><span>B</span></label>
-        <label><input type="radio" name="correct-${questionCount}" value="2"><span>C</span></label>
-        <label><input type="radio" name="correct-${questionCount}" value="3"><span>D</span></label>
+        <label><input type="radio" name="correct-${questionCount}" value="0" ${correctAnswer === 0 ? 'checked' : ''}><span>A</span></label>
+        <label><input type="radio" name="correct-${questionCount}" value="1" ${correctAnswer === 1 ? 'checked' : ''}><span>B</span></label>
+        <label><input type="radio" name="correct-${questionCount}" value="2" ${correctAnswer === 2 ? 'checked' : ''}><span>C</span></label>
+        <label><input type="radio" name="correct-${questionCount}" value="3" ${correctAnswer === 3 ? 'checked' : ''}><span>D</span></label>
       </div>
     </div>
   `;
@@ -224,6 +281,7 @@ function removeQuestionImage(btn) {
   input.value = '';
 }
 
+// ── Submit (Create or Update) ──
 async function submitExam() {
   const title = document.getElementById('examTitle').value.trim();
   const duration = parseInt(document.getElementById('examDuration').value);
@@ -251,7 +309,8 @@ async function submitExam() {
 
     // Get image if uploaded
     const imgPreview = qb.querySelector('.q-image-preview img');
-    const questionImage = (imgPreview && imgPreview.src && imgPreview.src.startsWith('data:')) ? imgPreview.src : '';
+    const questionImage = (imgPreview && imgPreview.src && imgPreview.src.startsWith('data:')) ? imgPreview.src : 
+                          (imgPreview && imgPreview.src && !imgPreview.src.startsWith('data:') && imgPreview.src !== window.location.href) ? imgPreview.src : '';
 
     if (!text || opts.some(o => !o) || !correctRadio) {
       showToast('Please fill in all fields for each question and select the correct answer.', 'error');
@@ -267,17 +326,35 @@ async function submitExam() {
     });
   }
 
-  try {
-    await apiRequest('/api/exams', {
-      method: 'POST',
-      body: JSON.stringify({ title, description, duration, scheduledStart, questions })
-    });
+  const submitBtn = document.getElementById('examSubmitBtn');
+  const originalText = submitBtn.textContent;
+  submitBtn.disabled = true;
+  submitBtn.textContent = editingExamId ? 'Saving...' : 'Creating...';
 
-    showToast('Exam created successfully!', 'success');
+  try {
+    if (editingExamId) {
+      // Update existing exam
+      await apiRequest(`/api/exams/${editingExamId}`, {
+        method: 'PUT',
+        body: JSON.stringify({ title, description, duration, scheduledStart, questions })
+      });
+      showToast('Exam updated successfully!', 'success');
+    } else {
+      // Create new exam
+      await apiRequest('/api/exams', {
+        method: 'POST',
+        body: JSON.stringify({ title, description, duration, scheduledStart, questions })
+      });
+      showToast('Exam created successfully!', 'success');
+    }
+
     closeCreateExamModal();
     loadExams();
   } catch (err) {
     showToast(err.message, 'error');
+  } finally {
+    submitBtn.disabled = false;
+    submitBtn.textContent = originalText;
   }
 }
 
@@ -373,6 +450,11 @@ function escapeHtml(str) {
   const div = document.createElement('div');
   div.textContent = str;
   return div.innerHTML;
+}
+
+function escapeHtmlAttr(str) {
+  if (!str) return '';
+  return str.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/'/g, '&#39;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
 // ── Init ──

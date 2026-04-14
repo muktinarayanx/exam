@@ -20,17 +20,31 @@ function showToast(message, type = 'info') {
   }, 4000);
 }
 
-// ── API Request ──
+// ── API Request (with timeout) ──
 async function apiRequest(url, options = {}) {
   const headers = {
     'Content-Type': 'application/json',
     'Authorization': `Bearer ${token}`,
     ...options.headers
   };
-  const response = await fetch(url, { ...options, headers });
-  const data = await response.json();
-  if (!response.ok) throw new Error(data.message || 'Request failed');
-  return data;
+
+  // 30-second timeout to prevent infinite loading
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 30000);
+
+  try {
+    const response = await fetch(url, { ...options, headers, signal: controller.signal });
+    clearTimeout(timeoutId);
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.message || 'Request failed');
+    return data;
+  } catch (err) {
+    clearTimeout(timeoutId);
+    if (err.name === 'AbortError') {
+      throw new Error('Request timed out. Please check your connection and try again.');
+    }
+    throw err;
+  }
 }
 
 // ── State ──
@@ -38,6 +52,7 @@ let examData = null;
 let answers = {};
 let timerInterval = null;
 let timeRemaining = 0;
+let isSubmitting = false; // Prevent double submissions
 
 // ── Get exam ID from URL ──
 const urlParams = new URLSearchParams(window.location.search);
@@ -144,6 +159,8 @@ function updateTimerDisplay() {
 
 // ── Submit ──
 function confirmSubmit() {
+  if (isSubmitting) return; // Prevent opening modal during submission
+
   const total = examData.questions.length;
   const answered = Object.keys(answers).length;
 
@@ -156,13 +173,27 @@ function closeConfirmModal() {
   document.getElementById('confirmModal').classList.remove('active');
 }
 
+// Helper to set all submit buttons state
+function setSubmitButtonsState(disabled, text) {
+  const submitBtn = document.getElementById('submitBtn');
+  submitBtn.disabled = disabled;
+  submitBtn.textContent = text;
+  // Also disable/enable the header submit button
+  document.querySelectorAll('[onclick="confirmSubmit()"]').forEach(btn => {
+    btn.disabled = disabled;
+    if (disabled) btn.style.opacity = '0.5';
+    else btn.style.opacity = '1';
+  });
+}
+
 async function submitExam() {
+  // Prevent double submissions
+  if (isSubmitting) return;
+  isSubmitting = true;
+
   clearInterval(timerInterval);
   closeConfirmModal();
-
-  const submitBtn = document.getElementById('submitBtn');
-  submitBtn.disabled = true;
-  submitBtn.textContent = 'Submitting...';
+  setSubmitButtonsState(true, 'Submitting...');
 
   try {
     const formattedAnswers = Object.entries(answers).map(([questionId, selectedAnswer]) => ({
@@ -177,6 +208,10 @@ async function submitExam() {
 
     // Show result modal
     const result = data.result;
+    if (!result) {
+      throw new Error('Invalid response from server. Please contact your examiner.');
+    }
+
     const resultContent = document.getElementById('resultContent');
     resultContent.innerHTML = `
       <div style="font-size: 3rem; margin-bottom: 16px;">${result.passed ? '🎉' : '😔'}</div>
@@ -205,9 +240,9 @@ async function submitExam() {
 
     document.getElementById('resultModal').classList.add('active');
   } catch (err) {
-    showToast(err.message, 'error');
-    submitBtn.disabled = false;
-    submitBtn.textContent = 'Submit Exam';
+    isSubmitting = false; // Allow retry on error
+    showToast(err.message || 'Submission failed. Please try again.', 'error');
+    setSubmitButtonsState(false, 'Submit Exam');
   }
 }
 

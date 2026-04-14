@@ -129,11 +129,13 @@ router.get('/exams/:id', async (req, res) => {
 
 // POST /api/student/exams/:id/submit — Submit exam answers
 router.post('/exams/:id/submit', async (req, res) => {
+  console.log(`📝 Submit request from: ${req.user?.email} for exam: ${req.params.id}`);
   try {
-    const { answers } = req.body; // [{ questionId, selectedAnswer }]
+    const studentAnswers = req.body.answers || []; // [{ questionId, selectedAnswer }]
 
     const exam = await Exam.findOne({ _id: req.params.id, isActive: true });
     if (!exam) {
+      console.log(`❌ Exam not found or not active: ${req.params.id}`);
       return res.status(404).json({ message: 'Exam not found or not active.' });
     }
 
@@ -155,6 +157,7 @@ router.post('/exams/:id/submit', async (req, res) => {
     // Check if already attempted
     const existingResult = await Result.findOne({ student: req.user._id, exam: exam._id });
     if (existingResult) {
+      console.log(`⚠️ Duplicate submission attempt by ${req.user.email} for exam ${exam.title}`);
       return res.status(400).json({ message: 'You have already attempted this exam.' });
     }
 
@@ -162,8 +165,12 @@ router.post('/exams/:id/submit', async (req, res) => {
     let score = 0;
     let totalMarks = 0;
 
+    if (!exam.questions || exam.questions.length === 0) {
+      return res.status(400).json({ message: 'This exam has no questions.' });
+    }
+
     exam.questions.forEach(question => {
-      const studentAnswer = answers.find(a => a.questionId === question._id.toString());
+      const studentAnswer = studentAnswers.find(a => a.questionId === question._id.toString());
       totalMarks += (question.marks || 1);
 
       if (studentAnswer && studentAnswer.selectedAnswer === question.correctAnswer) {
@@ -171,18 +178,20 @@ router.post('/exams/:id/submit', async (req, res) => {
       }
     });
 
-    const percentage = Math.round((score / totalMarks) * 100);
+    const percentage = totalMarks > 0 ? Math.round((score / totalMarks) * 100) : 0;
     const passed = percentage >= 40;
 
     const result = await Result.create({
       student: req.user._id,
       exam: exam._id,
-      answers: answers || [],
+      answers: studentAnswers,
       score,
       totalMarks,
       percentage,
       passed
     });
+
+    console.log(`✅ Exam submitted: ${req.user.email} scored ${score}/${totalMarks} (${percentage}%) on "${exam.title}"`);
 
     // Send email in background (non-blocking so result shows instantly)
     console.log(`📧 Sending result email to: ${req.user.email} (${req.user.name})`);
@@ -209,6 +218,7 @@ router.post('/exams/:id/submit', async (req, res) => {
       }
     });
   } catch (err) {
+    console.error(`❌ Submit error for ${req.user?.email}:`, err.message);
     res.status(500).json({ message: 'Server error.', error: err.message });
   }
 });

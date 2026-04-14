@@ -33,7 +33,10 @@
 
         <div class="form-group">
           <label class="form-label" for="registerPassword">Password</label>
-          <input type="password" id="registerPassword" class="form-input" placeholder="Min. 6 characters" required minlength="6">
+          <div style="position: relative;">
+            <input type="password" id="registerPassword" class="form-input" placeholder="Min. 6 characters" required minlength="6" style="padding-right: 40px;">
+            <button type="button" style="position: absolute; right: 0; top: 0; height: 100%; border: none; background: transparent; padding: 0 12px; cursor: pointer; color: var(--text-muted); font-size: 1.1rem; display: flex; align-items: center;" onclick="togglePassword('registerPassword', this)" title="Show/Hide Password">👁️</button>
+          </div>
         </div>
 
         <button type="submit" class="btn btn-primary btn-block btn-lg" id="registerBtn">

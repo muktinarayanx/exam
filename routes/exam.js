@@ -84,6 +84,42 @@ router.get('/:id/results', async (req, res) => {
   }
 });
 
+// PUT /api/exams/:id — Update an existing exam
+router.put('/:id', async (req, res) => {
+  try {
+    const exam = await Exam.findOne({ _id: req.params.id, createdBy: req.user._id });
+    if (!exam) {
+      return res.status(404).json({ message: 'Exam not found.' });
+    }
+
+    const { title, description, duration, questions, scheduledStart } = req.body;
+
+    if (!title || !duration || !questions || questions.length === 0) {
+      return res.status(400).json({ message: 'Title, duration, and at least one question are required.' });
+    }
+
+    // Validate questions
+    for (let i = 0; i < questions.length; i++) {
+      const q = questions[i];
+      if (!q.questionText || !q.options || q.options.length !== 4 || q.correctAnswer === undefined) {
+        return res.status(400).json({ message: `Question ${i + 1} is invalid. Needs text, 4 options, and a correct answer.` });
+      }
+    }
+
+    exam.title = title;
+    exam.description = description || '';
+    exam.duration = duration;
+    exam.scheduledStart = scheduledStart || null;
+    exam.questions = questions;
+
+    await exam.save();
+
+    res.json({ message: 'Exam updated successfully!', exam });
+  } catch (err) {
+    res.status(500).json({ message: 'Server error.', error: err.message });
+  }
+});
+
 // PUT /api/exams/:id/toggle — Toggle exam active status
 router.put('/:id/toggle', async (req, res) => {
   try {
